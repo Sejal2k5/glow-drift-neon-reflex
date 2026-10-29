@@ -1,0 +1,176 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#09071a">
+  <meta name="description" content="Glow Drift: Neon Reflex — a fast, orbital reflex game. Collect light, dodge geometric hazards, and phase through danger.">
+  <title>Glow Drift: Neon Reflex</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./src/styles.css">
+
+  <!-- Load the YouTube Playables SDK before game code -->
+  <script src="https://www.youtube.com/game_api/v1"></script>
+  <script type="module" src="./src/main.js"></script>
+</head>
+<body data-theme="neon">
+  <canvas id="game-canvas" tabindex="-1" aria-label="Glow Drift circular game arena. Use left and right arrows or A and D to orbit, and Space to phase."></canvas>
+
+  <div id="boot-screen" class="screen boot-screen">
+    <div class="boot-mark" aria-hidden="true"><span></span></div>
+    <p class="boot-title">GLOW DRIFT</p>
+    <p id="boot-status" class="muted">Charging the arena…</p>
+  </div>
+
+  <header id="hud" class="hud is-hidden" aria-label="Run status">
+    <div class="hud-score">
+      <span class="hud-label">Score</span>
+      <strong id="score-value">0</strong>
+    </div>
+    <div class="hud-center">
+      <div class="combo-line"><strong id="combo-value">×1</strong><span id="combo-count">Build a chain</span></div>
+      <div class="combo-track" aria-hidden="true"><span id="combo-meter"></span></div>
+    </div>
+    <div class="hud-run-info">
+      <div><span id="time-value">0:00</span><small>Wave <span id="wave-value">1</span></small></div>
+      <div id="lives" class="lives" aria-label="2 lives remaining"></div>
+    </div>
+    <div class="hud-actions">
+      <button id="sound-button" class="icon-button" type="button" aria-label="Mute sound effects and music" aria-pressed="true">
+        <svg id="sound-icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.5-.5a5 5 0 0 1 0 7M19 6a9 9 0 0 1 0 12"/></svg>
+        <svg id="sound-icon-off" class="is-hidden" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12 1 5 5m0-5-5 5"/></svg>
+      </button>
+      <button id="pause-button" class="icon-button" type="button" aria-label="Pause game"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v12M16 6v12"/></svg></button>
+    </div>
+  </header>
+
+  <main>
+    <section id="title-screen" class="screen title-screen is-hidden" aria-labelledby="game-title">
+      <div class="title-panel">
+        <div class="brand-orbit" aria-hidden="true"><span></span><i></i></div>
+        <p class="title-kicker">Neon Reflex</p>
+        <h1 id="game-title"><span>Glow</span> Drift</h1>
+        <p class="title-copy">Ride the orbit. Gather light.<br>Slip past the inevitable.</p>
+        <div class="best-line"><span>Personal best</span><strong id="title-best">0</strong></div>
+
+        <div class="difficulty-group" role="group" aria-label="Difficulty">
+          <button class="difficulty-button" type="button" data-difficulty="chill" aria-pressed="false">Chill</button>
+          <button class="difficulty-button selected" type="button" data-difficulty="normal" aria-pressed="true">Normal</button>
+          <button class="difficulty-button" type="button" data-difficulty="expert" aria-pressed="false">Expert</button>
+        </div>
+
+        <button id="play-button" class="primary-button" type="button"><span>Play</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 9 6-9 6V6Z"/></svg></button>
+        <button id="daily-button" class="daily-button" type="button">
+          <span class="daily-copy"><small>Daily challenge</small><strong id="daily-name">Single Spark</strong><span id="daily-description">One life. Score gains are boosted.</span></span>
+          <span class="daily-meta"><span id="daily-best">Daily best 0</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></span>
+        </button>
+
+        <nav class="title-nav" aria-label="Game options">
+          <button type="button" data-open="themes-modal">Themes</button>
+          <button type="button" data-open="stats-modal">Stats</button>
+          <button type="button" data-open="settings-modal">Settings</button>
+        </nav>
+        <p class="control-hint">Move with <kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> · Drag on touch · <kbd>Space</kbd> to phase</p>
+      </div>
+    </section>
+
+    <section id="pause-screen" class="screen overlay-screen is-hidden" aria-labelledby="pause-title">
+      <div class="result-panel compact-panel">
+        <p class="panel-kicker">Orbit suspended</p>
+        <h2 id="pause-title">Paused</h2>
+        <p class="muted">Take a breath. Your run is safe.</p>
+        <button id="resume-button" class="primary-button" type="button">Resume</button>
+        <div class="button-row">
+          <button id="pause-restart" class="secondary-button" type="button">Restart</button>
+          <button id="pause-home" class="secondary-button" type="button">End run</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameover-screen" class="screen overlay-screen is-hidden" aria-labelledby="gameover-title">
+      <div class="result-panel">
+        <p class="panel-kicker">Run report</p>
+        <h2 id="gameover-title">Drift complete</h2>
+        <span id="new-best" class="new-best is-hidden">New personal best</span>
+        <div class="final-score"><span>Score</span><strong id="final-score">0</strong></div>
+        <dl class="result-grid">
+          <div><dt>Survival</dt><dd id="final-time">0:00</dd></div>
+          <div><dt>Energy</dt><dd id="final-energy">0</dd></div>
+          <div><dt>Personal best</dt><dd id="final-best">0</dd></div>
+          <div><dt>Longest run</dt><dd id="final-longest">0:00</dd></div>
+        </dl>
+        <button id="restart-button" class="primary-button" type="button">Drift again</button>
+        <button id="gameover-home" class="text-button" type="button">Back to title</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="touch-controls" class="touch-controls is-hidden" aria-label="Touch controls">
+    <div class="move-controls">
+      <button id="move-left" class="move-button" type="button" aria-label="Orbit counterclockwise"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
+      <button id="move-right" class="move-button" type="button" aria-label="Orbit clockwise"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+    </div>
+    <div class="phase-control">
+      <span id="charge-value">0%</span>
+      <button id="phase-button" class="phase-button" type="button" aria-label="Phase charge 0 percent">Phase</button>
+    </div>
+  </div>
+
+  <div id="wave-banner" class="wave-banner" aria-live="polite"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"><strong id="toast-title"></strong><span id="toast-description"></span></div>
+
+  <div id="tutorial-modal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+    <div class="modal-panel tutorial-panel">
+      <p class="panel-kicker">First flight</p>
+      <h2 id="tutorial-title">Find your flow</h2>
+      <div class="tutorial-steps">
+        <div><span class="tutorial-symbol orbit-symbol" aria-hidden="true"></span><p><strong>Orbit</strong><span>Use A / D, arrow keys, mouse, or drag to move around the ring.</span></p></div>
+        <div><span class="tutorial-symbol spark-symbol" aria-hidden="true"></span><p><strong>Collect & combo</strong><span>Gather cyan sparks quickly to raise your multiplier. Coral shapes cost a life.</span></p></div>
+        <div><span class="tutorial-symbol phase-symbol" aria-hidden="true"></span><p><strong>Phase through danger</strong><span>Near misses charge Phase. Press Space or the Phase button to shatter hazards.</span></p></div>
+      </div>
+      <button id="tutorial-start" class="primary-button" type="button">Got it — let’s drift</button>
+    </div>
+  </div>
+
+  <div id="stats-modal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="stats-title">
+    <div class="modal-panel">
+      <button class="modal-close" type="button" data-close aria-label="Close statistics"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      <p class="panel-kicker">Your orbit</p>
+      <h2 id="stats-title">Statistics</h2>
+      <dl class="stats-grid">
+        <div><dt>Total runs</dt><dd id="stats-runs">0</dd></div>
+        <div><dt>Best score</dt><dd id="stats-best">0</dd></div>
+        <div><dt>Best survival</dt><dd id="stats-time">0:00</dd></div>
+        <div><dt>Energy collected</dt><dd id="stats-energy">0</dd></div>
+      </dl>
+      <div class="section-heading"><h3>Milestones</h3><span id="stats-achievements">0 / 5</span></div>
+      <ul id="achievement-list" class="achievement-list"></ul>
+    </div>
+  </div>
+
+  <div id="themes-modal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="themes-title">
+    <div class="modal-panel">
+      <button class="modal-close" type="button" data-close aria-label="Close themes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      <p class="panel-kicker">Recolor the void</p>
+      <h2 id="themes-title">Visual themes</h2>
+      <p class="muted modal-intro">Earn lifetime points across runs to unlock new arenas.</p>
+      <div id="theme-list" class="theme-list"></div>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-panel">
+      <button class="modal-close" type="button" data-close aria-label="Close settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      <p class="panel-kicker">Tune your run</p>
+      <h2 id="settings-title">Settings</h2>
+      <label class="setting-row"><span><strong>Sound</strong><small>Generated music and effects</small></span><input id="setting-sound" type="checkbox" checked><i aria-hidden="true"></i></label>
+      <label class="setting-row"><span><strong>Reduce motion</strong><small>Limits shake, trails, and particles</small></span><input id="setting-motion" type="checkbox"><i aria-hidden="true"></i></label>
+      <div class="settings-note">Host mute and pause controls always take priority over these preferences.</div>
+      <button id="reset-progress" class="danger-button" type="button">Reset progress</button>
+    </div>
+  </div>
+
+  <noscript><div class="noscript">Glow Drift needs JavaScript enabled to run.</div></noscript>
+</body>
+</html>
